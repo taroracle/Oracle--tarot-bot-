@@ -1,13 +1,29 @@
 import logging
 import random
 import os
+import threading
 from pathlib import Path
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # --- НАСТРОЙКИ ---
 TOKEN = "8383203194:AAF8u2HY-8H1ab7aExgzoCd54P6hbt4eUwo"  # ваш токен
 CARDS_FOLDER = "cards_images"
+
+# --- ПРОСТОЙ ВЕБ-СЕРВЕР ДЛЯ RENDER ---
+class SimpleHandler(BaseHTTPRequestHandler):
+    """Обработчик HTTP-запросов для Render"""
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+def run_web_server():
+    """Запускает веб-сервер в отдельном потоке"""
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+    server.serve_forever()
 
 # --- БАЗА ДАННЫХ КАРТ (78) ---
 cards_data = {}
@@ -222,21 +238,18 @@ async def random_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработка чисел в комментариях и личке"""
-    # Проверяем, есть ли текст в сообщении
     if not update.message or not update.message.text:
-        return  # игнорируем сообщения без текста
+        return
     
     text = update.message.text.strip().lower()
     chat_id = update.message.chat_id
     reply_id = update.message.message_id
     
-    # Проверяем на "рандом"
     if text in ["рандом", "random", "/random"]:
         card_num = random.randint(1, 78)
         await send_card(update, chat_id, card_num, reply_id)
         return
     
-    # Проверяем, является ли сообщение числом от 1 до 78
     if text.isdigit():
         num = int(text)
         if 1 <= num <= 78:
@@ -246,7 +259,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Пожалуйста, введите число от 1 до 78. Или напишите «рандом» для случайной карты.",
                 reply_to_message_id=reply_id
             )
-    # Если не число и не "рандом" — ничего не делаем (не спамим)
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -261,6 +273,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ========== ЗАПУСК ==========
 def main():
+    # Запускаем веб-сервер в отдельном потоке (для Render)
+    web_thread = threading.Thread(target=run_web_server, daemon=True)
+    web_thread.start()
+    
+    # Запускаем бота
     app = Application.builder().token(TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))

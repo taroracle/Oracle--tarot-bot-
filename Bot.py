@@ -6,7 +6,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # --- НАСТРОЙКИ ---
-TOKEN = "3833203194:AAF8u2HY-8H1ab7aExgzoCd54P6hbt4eUwo"  # ваш токен
+TOKEN = "8383203194:AAF8u2HY-8H1ab7aExgzoCd54P6hbt4eUwo" # ваш токен
 CARDS_FOLDER = "cards_images"
 
 # --- БАЗА ДАННЫХ КАРТ (78) ---

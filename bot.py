@@ -6,7 +6,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # --- НАСТРОЙКИ ---
-TOKEN = "8383203194:AAF8u2HY-8H1ab7aExgzoCd54P6hbt4eUwo" # ваш токен
+TOKEN = "8383203194:AAF8u2HY-8H1ab7aExgzoCd54P6hbt4eUwo"  # ваш токен
 CARDS_FOLDER = "cards_images"
 
 # --- БАЗА ДАННЫХ КАРТ (78) ---
@@ -198,23 +198,33 @@ async def random_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.callback_query.answer()
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка чисел в комментариях и личке"""
+    # Проверяем, есть ли текст в сообщении
+    if not update.message or not update.message.text:
+        return  # игнорируем сообщения без текста
+    
     text = update.message.text.strip().lower()
     chat_id = update.message.chat_id
-    reply_id = update.message.message_id
+    reply_id = update.message.message_id  # Ответ будет в этот же тред/комментарий
     
+    # Проверяем на "рандом"
     if text in ["рандом", "random", "/random"]:
         card_num = random.randint(1, 78)
         await send_card(update, chat_id, card_num, reply_id)
         return
     
+    # Проверяем, является ли сообщение числом от 1 до 78
     if text.isdigit():
         num = int(text)
         if 1 <= num <= 78:
             await send_card(update, chat_id, num, reply_id)
         else:
-            await update.message.reply_text("Пожалуйста, введите число от 1 до 78. Или напишите «рандом» для случайной карты.")
-    else:
-        pass
+            # Отвечаем в тот же тред
+            await update.message.reply_text(
+                "Пожалуйста, введите число от 1 до 78. Или напишите «рандом» для случайной карты.",
+                reply_to_message_id=reply_id
+            )
+    # Если не число и не "рандом" — ничего не делаем (не спамим)
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
